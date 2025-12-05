@@ -1,0 +1,2 @@
+spade~=4.1.2
+spade_llm~=0.2.0
