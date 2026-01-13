@@ -7,6 +7,9 @@ from spade.agent import Agent
 from spade.template import Template
 from spade.message import Message
 
+from core.communication import CommunicationManager
+
+
 def controleaza_bec(stare):
     with open("mediu.json", 'r', encoding='utf-8') as f:
         mediu = json.load(f)
@@ -33,23 +36,23 @@ def controleaza_temperatura(valoare):
 
 class ReceiverAgent(Agent):
     class RecvBehav(CyclicBehaviour):
+        async def on_start(self):
+            self.comm = CommunicationManager(self)
         async def run(self):
             msg = await self.receive(timeout=10)
             if msg:
+                print(f'Mesaj primit: {msg.body}')
                 msg_type = msg.metadata.get("performative")
                 if msg_type == 'request':
-                    msg_llm = Message()
-                    msg_llm.to = 'llm_agent@localhost'
-                    msg_llm.set_metadata("message_type", "llm")  # required by LLMAgent
-                    msg_llm.set_metadata("performative", "request")  # expected performative
-                    msg_llm.thread = "conversation-123"  # optional conversation id
-                    msg_llm.body = msg.body
-                    msg_llm.sender = str(self.agent.jid)
-                    await self.send(msg_llm)
-                    print(f'Am trimis mesajul catre llm_agent: {msg_llm.body}')
-                else:
-                    print(f'Mesaj de la LLM Agent primit: {msg.body}')
-                    exec(msg.body)
+                    raspuns_llm = await self.comm.query(
+                        protocol = 'SPADELLM',
+                        target_id = 'llm_agent@localhost',
+                        query_data = msg.body,
+                        timeout=45
+                    )
+                    if raspuns_llm:
+                        print(f'Raspuns LLM primit: {raspuns_llm}')
+                        exec(raspuns_llm)
             else:
                 print(f"Niciun mesaj primit in ultimele 10 de secunde.")
 
