@@ -9,31 +9,6 @@ from spade.message import Message
 
 from core.communication import CommunicationManager
 
-
-def controleaza_bec(stare):
-    with open("mediu.json", 'r', encoding='utf-8') as f:
-        mediu = json.load(f)
-    mediu['lumina'] = stare
-    with open("mediu.json", 'w', encoding='utf-8') as f:
-        json.dump(mediu, f, indent=4)
-    return f"Becul a fost setat pe {stare}"
-
-def controleaza_boxa(stare):
-    with open("mediu.json", 'r', encoding='utf-8') as f:
-        mediu = json.load(f)
-    mediu['boxa'] = stare
-    with open("mediu.json", 'w', encoding='utf-8') as f:
-        json.dump(mediu, f, indent=4)
-    return f"Boxa a fost setata pe {stare}"
-
-def controleaza_temperatura(valoare):
-    with open("mediu.json", 'r', encoding='utf-8') as f:
-        mediu = json.load(f)
-    mediu['temperatura'] = valoare
-    with open("mediu.json", 'w', encoding='utf-8') as f:
-        json.dump(mediu, f, indent=4)
-    return f"Temperatura a fost setata pe {valoare} grade Celsius"
-
 class ReceiverAgent(Agent):
     class RecvBehav(CyclicBehaviour):
         async def on_start(self):
@@ -52,7 +27,14 @@ class ReceiverAgent(Agent):
                     )
                     if raspuns_llm:
                         print(f'Raspuns LLM primit: {raspuns_llm}')
-                        exec(raspuns_llm)
+                        raspuns_llm = json.loads(raspuns_llm)
+                        tool_call = await self.comm.query(
+                            protocol = 'MCP',
+                            tool_name = raspuns_llm['tool_name'],
+                            parameters = raspuns_llm['parameters'],
+                            base_url = 'http://localhost:8000'
+                        )
+                        print(f'Rezultat apel tool: {tool_call}')
             else:
                 print(f"Niciun mesaj primit in ultimele 10 de secunde.")
 
